@@ -15,10 +15,10 @@ TARGET_NO_BOOTLOADER := true
 TARGET_BOARD_PLATFORM := sofia3g
 
 # Kernel (prebuilt)
-BOARD_KERNEL_BASE := 0x007f8000
+BOARD_KERNEL_BASE := 0x00000000
 BOARD_KERNEL_PAGESIZE := 4096
 BOARD_KERNEL_CMDLINE := androidboot.selinux=permissive idle=halt androidboot.hardware=sofia3g nolapic_pm firmware_class.path=/system/vendor/firmware nolapic_timer x86_intel_xgold_timer=soctimer_only vmalloc=256M slub_max_order=0 build_version=3 debug notsc
-BOARD_MKBOOTIMG_ARGS := --ramdisk_offset 0xffc08000 --tags_offset 0xff808100 --second_offset 0xfff08000 --second $(DEVICE_PATH)/prebuilt/second
+BOARD_MKBOOTIMG_ARGS := --kernel_offset 0x00800000 --ramdisk_offset 0x00400000 --second_offset 0x00700000 --tags_offset 0x00000100 --second $(DEVICE_PATH)/prebuilt/second
 TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/kernel
 
 # Partitions (measured: 17408 KiB each)

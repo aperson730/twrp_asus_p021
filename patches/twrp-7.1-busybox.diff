@@ -1,0 +1,30 @@
+diff --git a/include/platform.h b/include/platform.h
+index b5aa683..d95049c 100644
+--- a/include/platform.h
++++ b/include/platform.h
+@@ -497,9 +497,7 @@ extern char *stpcpy(char *p, const char *to_add) FAST_FUNC;
+ extern char *strcasestr(const char *s, const char *pattern) FAST_FUNC;
+ #endif
+ 
+-#ifndef HAVE_STRCHRNUL
+-extern char *strchrnul(const char *s, int c) FAST_FUNC;
+-#endif
++char *strchrnul(const char *s, int c);
+ 
+ #ifndef HAVE_STRSEP
+ extern char *strsep(char **stringp, const char *delim) FAST_FUNC;
+diff --git a/libbb/platform.c b/libbb/platform.c
+index 5fcd448..545a93b 100644
+--- a/libbb/platform.c
++++ b/libbb/platform.c
+@@ -7,8 +7,9 @@
+  * Licensed under GPLv2, see file LICENSE in this source tree.
+  */
+ #include "libbb.h"
++char *strchrnul(const char *s, int c);
+ 
+-#ifndef HAVE_STRCHRNUL
++#if 0 /* bionic provides strchrnul */
+ char* FAST_FUNC strchrnul(const char *s, int c)
+ {
+ 	while (*s != '\0' && *s != c)

@@ -1,0 +1,13 @@
+diff --git a/mkbootimg/mkbootimg b/mkbootimg/mkbootimg
+index d0149e8..ef7bfee 100755
+--- a/mkbootimg/mkbootimg
++++ b/mkbootimg/mkbootimg
+@@ -58,7 +58,7 @@ def write_header(args):
+         args.base + args.tags_offset,                   # physical addr for kernel tags
+         args.pagesize,                                  # flash page size we assume
+         filesize(args.dt),                              # size in bytes
+-        (args.os_version << 11) | args.os_patch_level)) # os version and patch level
++        ((args.os_version << 11) | args.os_patch_level) & 0xFFFFFFFF)) # os version and patch level
+     args.output.write(pack('16s', args.board.encode())) # asciiz product name
+     args.output.write(pack('512s', args.cmdline[:512].encode()))
+ 
