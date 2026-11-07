@@ -1,0 +1,25 @@
+diff --git a/Android.mk b/Android.mk
+index aedb3f9..a7e407b 100755
+--- a/Android.mk
++++ b/Android.mk
+@@ -83,6 +83,7 @@ ifneq ($(TARGET_RECOVERY_REBOOT_SRC),)
+ endif
+ 
+ LOCAL_MODULE := recovery
++LOCAL_CFLAGS += -mstackrealign
+ 
+ #LOCAL_FORCE_STATIC_EXECUTABLE := true
+ 
+diff --git a/partition.cpp b/partition.cpp
+index 3f25772..dee7fa1 100755
+--- a/partition.cpp
++++ b/partition.cpp
+@@ -1461,7 +1461,7 @@ bool TWPartition::Is_Mounted(void) {
+         if (!Symlink_Mount_Point.empty()) {
+             scan_mounted_volumes();
+             const MountedVolume * sml = find_mounted_volume_by_mount_point(Symlink_Mount_Point.c_str());
+-            if (sml != nullptr) {
++            if (sml != NULL) {
+                 return true;
+             }
+         }

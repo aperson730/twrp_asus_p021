@@ -1,1 +1,5 @@
 *.img
+*.win
+*.sha2
+*.tar.gz
+BACKUPS/
