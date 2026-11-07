@@ -68,3 +68,8 @@ present (they live in this tree under `recovery/root/`), then tar it as stage 2.
 
 ## Credits
 Generated with twrpdtgen (SebaUbuntu), then heavily modified by hand.
+
+## Known issues (open)
+- Splash logo not shown (gray background); cause unknown. `indeterminate013` image fails to load.
+- SD card (exFAT) does not mount; needs texfat.ko from stock system/lib/modules.
+- Hybrid: stock Intel init/sepolicy with 7.1 recovery, linker, libs and adbd (no --root_seclabel).
