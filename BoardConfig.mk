@@ -47,9 +47,4 @@ TW_USE_TOOLBOX := true
 TW_NO_SCREEN_TIMEOUT := true
 TW_EXCLUDE_MTP := true
 
-TARGET_GLOBAL_CFLAGS += -mstackrealign -mstack-alignment=4
-TARGET_GLOBAL_CPPFLAGS += -mstackrealign -mstack-alignment=4
 
-# Stack realign: 32-bit x86 recovery crashes on movaps with a misaligned stack
-TARGET_GLOBAL_CFLAGS += -mstackrealign -mstack-alignment=4
-TARGET_GLOBAL_CPPFLAGS += -mstackrealign -mstack-alignment=4
