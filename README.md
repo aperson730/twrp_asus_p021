@@ -73,3 +73,10 @@ Generated with twrpdtgen (SebaUbuntu), then heavily modified by hand.
 - Splash logo not shown (gray background); cause unknown. `indeterminate013` image fails to load.
 - SD card (exFAT) does not mount; needs texfat.ko from stock system/lib/modules.
 - Hybrid: stock Intel init/sepolicy with 7.1 recovery, linker, libs and adbd (no --root_seclabel).
+
+## Building on twrp-7.1 (current)
+Use `-b twrp-7.1` in `repo init`. Apply `patches/twrp-7.1-busybox.diff` in `external/busybox`
+(strchrnul declaration conflict). `BoardConfig.mk` uses base 0 with absolute offsets because the
+7.1 mkbootimg overflows on wrapped offsets. No `-mstackrealign` is needed on this branch.
+The built root does not boot with its own init on this kernel, so the working tarball is a hybrid
+(stock Intel init/sepolicy/rc files plus the 7.1 recovery, linker, libs, twres and adbd).
