@@ -3,3 +3,4 @@
 *.sha2
 *.tar.gz
 BACKUPS/
+bringup/busybox-i686.bin
