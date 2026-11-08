@@ -4,3 +4,6 @@
 *.tar.gz
 BACKUPS/
 bringup/busybox-i686.bin
+tools/fb/fbview
+tools/fb/fbtail
+alpine*.tar*
