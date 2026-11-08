@@ -80,3 +80,11 @@ Use `-b twrp-7.1` in `repo init`. Apply `patches/twrp-7.1-busybox.diff` in `exte
 7.1 mkbootimg overflows on wrapped offsets. No `-mstackrealign` is needed on this branch.
 The built root does not boot with its own init on this kernel, so the working tarball is a hybrid
 (stock Intel init/sepolicy/rc files plus the 7.1 recovery, linker, libs, twres and adbd).
+
+## Assembling the stage-2 tarball (tested)
+After a twrp-7.1 build:
+    bringup/assemble-hybrid.sh <stock-recovery-ramdisk-dir> <out/.../recovery/root> stage2.tar.gz
+Needs a static i686 busybox saved as bringup/busybox-i686.bin (not committed).
+The stock ramdisk dir comes from unpacking your own stock recovery.img.
+Push the result from stock Android to /data/local/tmp/stage2.tar.gz, then `fastboot boot mod-recovery.img`.
+Verified: uid=0 adb, single core, one TWRP start, UI and boot backup working with the 7.1 toybox tools.
