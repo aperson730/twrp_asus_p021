@@ -33,7 +33,7 @@ ln -sf busybox "$W/system/bin/sh"
 # Sanity checks
 grep -q "root_seclabel" "$W/init.rc" && { echo "ERROR: init.rc still uses --root_seclabel"; exit 1; }
 grep -qE "service (snap|kick) " "$W/init.rc" && { echo "ERROR: debug services present"; exit 1; }
-grep -q "cpu1/online" "$W/init.recovery.sofia3g.rc" || { echo "ERROR: single-core block missing"; exit 1; }
+grep -q "cpu3/online" "$W/init.recovery.sofia3g.rc" || { echo "ERROR: single-core block missing"; exit 1; }
 miss=0
 for b in recovery adbd; do
   for l in $(readelf -d "$W/sbin/$b" | sed -n 's/.*NEEDED.*\[\(.*\)\]/\1/p'); do
