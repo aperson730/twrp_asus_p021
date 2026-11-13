@@ -5,7 +5,7 @@
  * Build (PC, needs 32-bit glibc):  gcc -m32 -static -O2 fbtail.c -o fbtail
  * Run (tablet, TWRP stopped):      /data/local/tmp/fbtail FONT.psfu [scale] [fifo]
  * Default FIFO: /data/local/tmp/term   (created if missing)
- * Not compiled or tested by the author; expect to fix small things.
+ * Tested on the device.
  */
 #include <fcntl.h>
 #include <stdint.h>

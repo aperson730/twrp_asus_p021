@@ -8,7 +8,8 @@ Intel SoFIA 3G (x86), stock Android 5.0.2 (LRX22G, WW_P021-V4.6.5-20160419).
 ## What works (tested)
 - Source-built TWRP boots and draws: first on twrp-5.1, now on twrp-7.1 as a hybrid stage 2
   (see "Building on twrp-7.1" below).
-- Touch, brightness slider, USB/adb (VID:PID 8087:08f4) work.
+- Touch, brightness slider, USB/adb (VID:PID 8087:08f4) work. adb runs as root (uid 0).
+- Advanced > Terminal works (7.1 hybrid).
 - Boot partition backup works, and was verified byte-for-byte against the stock boot image.
 
 ## Not tested / unknown
@@ -23,16 +24,26 @@ Intel SoFIA 3G (x86), stock Android 5.0.2 (LRX22G, WW_P021-V4.6.5-20160419).
 - Backlight: `/sys/class/leds/lcd-backlight/brightness`, max 255.
 - Kernel: stock 3.14.0-00002-ge2a1f04 (prebuilt in `prebuilt/kernel`). A kernel rebuilt from
   the ASUS source also boots; see `kernel/README.md` (only gcc 4.6.3 works).
+  `prebuilt/kernel` is a bzImage with the real-mode setup sectors removed (starts at the 32-bit
+  entry code, `fc f6 86 11 ...`); `bringup/repack-kernel.py` strips them from a fresh bzImage.
+- The bootloader does not check the kernel's size, hash or signature: the stock kernel padded
+  by 4096 bytes, or with a changed gzip header, still boots via `fastboot boot`.
+- SoC: 4 cores, frequencies 416/728/900 MHz. Stock rc caps `thermal_scaling_max_freq` at 728000.
+- USB IDs: stock Android 0b05:7773, fastboot 8087:0912, recovery 8087:08f4.
+- Framebuffer node is `/dev/graphics/fb0` (there is no `/dev/fb0`). Byte order R,G,B,X, stride 3200.
 - boot and recovery partitions: 17,825,792 bytes each (`ImcPartID071` / `ImcPartID121`).
 - `/nvm_fs_partition` and `/ADF` hold modem and calibration data. They are deliberately
   NOT in `recovery.fstab`. Never back up, wipe or write them.
 
 ## Important quirks
 1. **Not all cores online.** With all 4 cores online, TWRP stalls and the tablet hard-resets
-   within about 2 minutes. Cause not identified.
+   within about 2 minutes, on both the stock and the rebuilt kernel. Cause not identified.
+   Cores 0-2 with cpu3 offline is stable. Once offline, cpu3 cannot be brought back
+   (`smpboot: CPU3: Not responding`); cpu1 and cpu2 re-online fine. Under stock Android all
+   4 cores run.
    - twrp-5.1 tree: single core (cpu1-3 offline in `recovery/root/init.recovery.sofia3g.rc`).
    - twrp-7.1 hybrid: three cores (only cpu3 offline in `bringup/hybrid-71/init.recovery.sofia3g.rc`).
-2. **Ramdisk size limit.** The stock layout leaves about 3 MB between the ramdisk and second-stage
+2. **Ramdisk size limit.** The stock layout leaves about 3 MB between the ramdisk and second-blob
    addresses, so a full TWRP ramdisk does not fit. Boot is **two-stage**:
    - Stage 1: a modified stock recovery image (`mod-recovery.img`) mounts `/data` read-only,
      unpacks `/data/local/tmp/stage2.tar.gz` into a tmpfs and runs `switch_root`.
@@ -42,7 +53,9 @@ Intel SoFIA 3G (x86), stock Android 5.0.2 (LRX22G, WW_P021-V4.6.5-20160419).
 3. **Tarballs must be root-owned**: `tar --owner=0 --group=0 --numeric-owner -czf ...`
 4. **Push the tarball from stock Android**, not from recovery, then `fastboot boot` stage 1.
 5. Do not wipe or format `/data` from TWRP: it holds the stage-2 tarball.
-6. The `second` blob (`prebuilt/second`, 236575 bytes) is the stock Intel second stage and
+6. The `second` blob (`prebuilt/second`, 236575 bytes) is the device tree (dtb, model
+   `intel,sofia_3gr_soc-es2`); the kernel source builds an identical one as
+   `SF_3GR-es1-sr-garnet-Z300CG.dtb`. It
    must be passed to mkbootimg.
 
 ## Build (twrp-5.1, Ubuntu 16.04 Docker container)
@@ -91,8 +104,8 @@ After a twrp-7.1 build:
 Needs a static i686 busybox saved as bringup/busybox-i686.bin (not committed).
 The stock ramdisk dir comes from unpacking your own stock recovery.img.
 Push the result from stock Android to /data/local/tmp/stage2.tar.gz, then `fastboot boot mod-recovery.img`.
-Verified (on one core, before the three-core default): uid=0 adb, one TWRP start, UI and boot
-backup working with the 7.1 toybox tools.
+Verified: uid=0 adb, one TWRP start, UI and boot backup working with the 7.1 toybox tools
+(first tested on one core; three cores, with cpu3 offline, also stable).
 
 ## Repository layout
 - Top level, `recovery/`, `recovery.fstab`, `prebuilt/`: the TWRP device tree itself.

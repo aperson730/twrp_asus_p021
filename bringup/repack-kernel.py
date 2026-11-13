@@ -9,7 +9,7 @@ plain bzImage: its kernel starts directly at the protected-mode entry code
 off. So this script strips (setup_sects + 1) * 512 bytes from the front of the
 bzImage and updates the kernel size in the header.
 
-Untested. Boot results only with `fastboot boot`, never flash.
+Tested with `fastboot boot` (stock kernel and a gcc 4.6.3 rebuild both boot). Never flash.
 """
 import hashlib
 import struct

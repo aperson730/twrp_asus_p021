@@ -2,7 +2,7 @@
 
 - bootinfo.py: prints boot image header fields (page size, addresses, cmdline).
 - repack.py: rebuilds a boot image from a stock one with a new ramdisk
-  (copies kernel + second stage, recomputes SHA). Optional 4th arg sets ramdisk address.
+  (copies kernel + second blob, which is the device tree, recomputes SHA). Optional 4th arg sets ramdisk address.
 - build-mod.sh: builds mod-recovery.img (stage 1).
 - stage1.sh: init script in stage 1. Mounts /data read-only, unpacks
   /data/local/tmp/stage2.tar.gz into a 96 MB tmpfs, switch_root to /twrp/init.

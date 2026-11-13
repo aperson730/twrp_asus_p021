@@ -9,7 +9,7 @@
  *   /data/local/tmp/fbview FONT.psf TEXT.txt [scale] [/dev/input/eventN]
  *
  * Tap the left third of the screen: previous page. Anywhere else: next page.
- * Not compiled or tested by the author; expect to fix small things.
+ * Tested on the device.
  */
 #include <fcntl.h>
 #include <stdint.h>
