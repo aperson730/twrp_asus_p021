@@ -135,7 +135,32 @@ Test run 2026-11-13 (old gcc 4.6.3 kernel, `stage2-4core`, TWRP left idle, kmsg 
   the hypervisor while the others continue. Per-CPU lockup detectors cannot report a CPU that
   does not run. Not proven.
 
+Second run 2026-11-13 (same setup, logger on the tablet pinned to cpu0 writing to /data every
+2 s, then the pstore panic record read from a 3-core TWRP). **Root cause found:**
+- At ~57 s uptime cpu3 stops taking any interrupt: its CapCom timer IRQ (125) and its
+  rescheduling-IPI count freeze, and `watchdog/3`, `ksoftirqd/3`, `migration/3` never run again.
+  `/proc/stat` keeps adding idle time for cpu3 only because NO_HZ fills in idle time for a sleeping
+  CPU: cpu3 went idle and was never woken.
+- ~6 s later cpu2 hangs: `recovery` calls `madvise` -> `zap_page_range` -> TLB flush ->
+  `smp_call_function_single` to cpu3 and spins waiting for an answer that never comes.
+- Panic record (`/sys/fs/pstore/dmesg-ramoops-0.enc.z`; skip the `====...` header line, the rest
+  is zlib): `BUG: soft lockup - CPU#2 stuck for 22s! [recovery:189]`,
+  `EIP is at generic_exec_single`, `EDI: 00000003`, then `Kernel panic - not syncing: softlockup`.
+  `PANIC_TIMEOUT=1` reboots one second later. That is the "hard reset".
+- An RCU stall warning at 85 s ended before its dump.
+- The first run froze without a reset because nothing happened to spin in the kernel waiting on
+  cpu3; the tasks queued on cpu3 just never ran.
+- Every run logs `vdump: Kernel vdump Thread running` at 56.7 s, right before cpu3 dies. That is
+  `vdump_set_linux_config` giving up after 20 x 2 s waiting for `/data/local/tmp/vdump.conf`; it
+  makes no hypercall when the file is missing, so it is probably only a timing coincidence.
+- Open question: why the hypervisor stops delivering interrupts to vcpu3 (or stops running it)
+  at ~57 s in TWRP but not in Android, where cpu3 shows steal time and keeps working.
+
 Tests to run next:
+0. Keep cpu3 busy (a spin loop pinned with `taskset 0x8`) so it never goes idle. If it survives
+   past 60 s, the loss happens on idle entry/wakeup; if it still dies, the hypervisor takes the
+   vcpu at a fixed time. Then try disabling cpu3's cpuidle state
+   (`/sys/devices/system/cpu/cpu3/cpuidle/state*/disable`).
 1. Stream the kernel log to the PC through the stall: `adb shell cat /proc/kmsg > kmsg-stall.txt`,
    then look for `soft lockup`, `hard LOCKUP` or `RCU stall` near the end (names the stuck CPU).
 2. In TWRP, before onlining cpu3: `echo 0 > /proc/sys/kernel/softlockup_panic; echo 0 > /proc/sys/kernel/panic`.
