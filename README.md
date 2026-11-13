@@ -166,6 +166,15 @@ from the last update), the logger's `sleep 2` never returned after 199.6 s, and 
 fired (its timer depends on the same clock). In the idle run the duty had moved to another CPU,
 which is why that clock kept going. Workaround for now: keep cpu3 offline (current default).
 
+Fourth run 2026-11-13: modem start attempted in 4-core TWRP at 8 s uptime with
+`echo 1 > /sys/class/misc/vmodem/modem_state` (driver reads ImcPartID022-024 read-only into the
+modem's memory and calls `mv_vm_start(1)`). The write returned success but the state stayed
+**Off** for the whole run, so the modem VM never started. cpu3 died at the usual point (CapCom
+IRQ 125 frozen between 56.6 s and 62.8 s), adb dropped at ~75 s and the tablet reset by itself.
+Inconclusive about the modem's role, since it never ran. In Android the `modem_state` node is
+owned by `radio`, so a radio daemon (probably rild) starts it, maybe after other setup
+(`sec_daemon`, `setup_fs_nvm`) that TWRP lacks.
+
 Tests to run next:
 0. (done, see above) Keep cpu3 busy (a spin loop pinned with `taskset 0x8`) so it never goes idle. If it survives
    past 60 s, the loss happens on idle entry/wakeup; if it still dies, the hypervisor takes the
