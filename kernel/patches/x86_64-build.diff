@@ -1,0 +1,74 @@
+--- a/include/sofia/irq_vectors.h
++++ b/include/sofia/irq_vectors.h
+@@ -16,10 +16,19 @@
+ #ifndef _SOFIA_IRQ_VECTORS_H
+ #define _SOFIA_IRQ_VECTORS_H
+ 
++#if defined(__ASSEMBLY__) && defined(CONFIG_X86_64)
++/* entry_64.S passes these through nested gas macros that cannot take a
++ * parenthesised argument; the expansion is always used as $~(\num) there. */
++#define RESCHEDULE_VECTOR		CONFIG_LOCAL_APIC_TIMER_VECTOR_NR+4
++#define CALL_FUNCTION_VECTOR	CONFIG_LOCAL_APIC_TIMER_VECTOR_NR+3
++#define CALL_FUNCTION_SINGLE_VECTOR	CONFIG_LOCAL_APIC_TIMER_VECTOR_NR+2
++#define REBOOT_VECTOR			CONFIG_LOCAL_APIC_TIMER_VECTOR_NR+1
++#else
+ #define RESCHEDULE_VECTOR		(CONFIG_LOCAL_APIC_TIMER_VECTOR_NR+4)
+ #define CALL_FUNCTION_VECTOR	(CONFIG_LOCAL_APIC_TIMER_VECTOR_NR+3)
+ #define CALL_FUNCTION_SINGLE_VECTOR	(CONFIG_LOCAL_APIC_TIMER_VECTOR_NR+2)
+ #define REBOOT_VECTOR			(CONFIG_LOCAL_APIC_TIMER_VECTOR_NR+1)
++#endif
+ #define LOCAL_TIMER_VECTOR		CONFIG_LOCAL_APIC_TIMER_VECTOR_NR
+ 
+ #endif /* _SOFIA_IRQ_VECTORS_H */
+--- a/arch/x86/kernel/apic/apic_sofia.c
++++ b/arch/x86/kernel/apic/apic_sofia.c
+@@ -205,6 +205,14 @@
+ 	mv_ipi_post(vector, vcpus);
+ }
+ 
++#ifdef CONFIG_X86_64
++/* default_phys_pkg_id() only exists for 32-bit; same body as flat_phys_pkg_id */
++static int default_phys_pkg_id(int cpuid_apic, int index_msb)
++{
++	return cpuid_apic >> index_msb;
++}
++#endif
++
+ static struct apic apic_sofia = {
+ 
+ 	.name				= "sofia",
+--- a/drivers/mobilevisor/sec_shared_mem.c
++++ b/drivers/mobilevisor/sec_shared_mem.c
+@@ -25,8 +25,8 @@
+ 
+ int n_alloc = 0;
+ 
+-unsigned int sec_heap_start_addr = (unsigned int)&heap[0];
+-unsigned int sec_heap_stop_addr = (unsigned int)&heap[HEAP_SIZE-1];
++unsigned long sec_heap_start_addr = (unsigned long)&heap[0];
++unsigned long sec_heap_stop_addr = (unsigned long)&heap[HEAP_SIZE-1];
+ 
+ typedef enum{
+ 	ALLOC,
+@@ -128,8 +128,8 @@
+ 		pr_err("[sec_shared_mem] sec_shared_mem_free: pointer is already freed\n");
+ 		return;
+ 	}
+-	if (((unsigned int)ptr < sec_heap_start_addr) ||
+-			((unsigned int)ptr > sec_heap_stop_addr)) {
++	if (((unsigned long)ptr < sec_heap_start_addr) ||
++			((unsigned long)ptr > sec_heap_stop_addr)) {
+ 		pr_err("[sec_shared_mem] sec_shared_mem_free: cannot free pointer outside bounds\n");
+ 		return;
+ 	}
+--- a/drivers/mobilevisor/sec_shared_mem.h
++++ b/drivers/mobilevisor/sec_shared_mem.h
+@@ -15,7 +15,7 @@
+ #ifndef __SEC_SHARED_MEM_DEFINED_H__
+ #define __SEC_SHARED_MEM_DEFINED_H__
+ 
+-extern void *sec_shared_mem_alloc(unsigned int size);
++extern void *sec_shared_mem_alloc(size_t size);
+ extern void sec_shared_mem_free(void *ptr);
+ 
+ #define SEC_SHARED_MEM_ALLOC_ENABLED
