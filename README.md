@@ -6,7 +6,8 @@ Intel SoFIA 3G (x86), stock Android 5.0.2 (LRX22G, WW_P021-V4.6.5-20160419).
 **Status: boots via `fastboot boot` only. Flashing is untested.**
 
 ## What works (tested)
-- Source-built TWRP (twrp-5.1 minimal manifest) boots and draws.
+- Source-built TWRP boots and draws: first on twrp-5.1, now on twrp-7.1 as a hybrid stage 2
+  (see "Building on twrp-7.1" below).
 - Touch, brightness slider, USB/adb (VID:PID 8087:08f4) work.
 - Boot partition backup works, and was verified byte-for-byte against the stock boot image.
 
@@ -20,21 +21,24 @@ Intel SoFIA 3G (x86), stock Android 5.0.2 (LRX22G, WW_P021-V4.6.5-20160419).
 ## Hardware facts
 - Display 800x1280, framebuffer 32 bpp. Touch is Atmel maXTouch (`atmel_mxt_ts`).
 - Backlight: `/sys/class/leds/lcd-backlight/brightness`, max 255.
-- Kernel: stock 3.14.0-00002-ge2a1f04 (prebuilt in `prebuilt/kernel`, kernel source not used).
+- Kernel: stock 3.14.0-00002-ge2a1f04 (prebuilt in `prebuilt/kernel`). A kernel rebuilt from
+  the ASUS source also boots; see `kernel/README.md` (only gcc 4.6.3 works).
 - boot and recovery partitions: 17,825,792 bytes each (`ImcPartID071` / `ImcPartID121`).
 - `/nvm_fs_partition` and `/ADF` hold modem and calibration data. They are deliberately
   NOT in `recovery.fstab`. Never back up, wipe or write them.
 
 ## Important quirks
-1. **Single core only.** With all 4 cores online, TWRP stalls and the tablet hard-resets within
-   about 2 minutes. Cores 1-3 are taken offline in `recovery/root/init.recovery.sofia3g.rc`.
-   Cause not identified.
+1. **Not all cores online.** With all 4 cores online, TWRP stalls and the tablet hard-resets
+   within about 2 minutes. Cause not identified.
+   - twrp-5.1 tree: single core (cpu1-3 offline in `recovery/root/init.recovery.sofia3g.rc`).
+   - twrp-7.1 hybrid: three cores (only cpu3 offline in `bringup/hybrid-71/init.recovery.sofia3g.rc`).
 2. **Ramdisk size limit.** The stock layout leaves about 3 MB between the ramdisk and second-stage
    addresses, so a full TWRP ramdisk does not fit. Boot is **two-stage**:
    - Stage 1: a modified stock recovery image (`mod-recovery.img`) mounts `/data` read-only,
      unpacks `/data/local/tmp/stage2.tar.gz` into a tmpfs and runs `switch_root`.
    - Stage 2: the TWRP ramdisk (`out/.../recovery/root`) packed as that tarball.
-   - Stage 1 and the helper scripts are **not** in this repo.
+   - Stage 1 and the helper scripts are in `bringup/` (see `bringup/README.md`). The stock
+     `init` binary and the static busybox it needs are not committed.
 3. **Tarballs must be root-owned**: `tar --owner=0 --group=0 --numeric-owner -czf ...`
 4. **Push the tarball from stock Android**, not from recovery, then `fastboot boot` stage 1.
 5. Do not wipe or format `/data` from TWRP: it holds the stage-2 tarball.
@@ -62,7 +66,7 @@ present (they live in this tree under `recovery/root/`), then tar it as stage 2.
 ## Notes
 - Touch needs `mTX1666T2_cfg*.raw` in `/system/vendor/firmware` and `/lib/firmware`.
 - The 5.1 build is CPU-bound and laggy on one core. A TWRP 3.3.1 binary from another device
-  was much faster, so a newer branch is the next goal.
+  was much faster, which led to the move to twrp-7.1.
 - Keep a stock boot/recovery backup before experimenting. Never flash the modem partitions.
 - Redact the device serial number before sharing logs or backup folder names.
 
@@ -87,4 +91,13 @@ After a twrp-7.1 build:
 Needs a static i686 busybox saved as bringup/busybox-i686.bin (not committed).
 The stock ramdisk dir comes from unpacking your own stock recovery.img.
 Push the result from stock Android to /data/local/tmp/stage2.tar.gz, then `fastboot boot mod-recovery.img`.
-Verified: uid=0 adb, single core, one TWRP start, UI and boot backup working with the 7.1 toybox tools.
+Verified (on one core, before the three-core default): uid=0 adb, one TWRP start, UI and boot
+backup working with the 7.1 toybox tools.
+
+## Repository layout
+- Top level, `recovery/`, `recovery.fstab`, `prebuilt/`: the TWRP device tree itself.
+- `patches/`: source fixes for twrp-5.1 (bootable/recovery) and twrp-7.1 (busybox, mkbootimg).
+- `bringup/`: stage-1 image, stage-2 assembly, boot image tools; `hybrid-71/` holds the edited
+  init files for the 7.1 hybrid.
+- `kernel/`: stock kernel config and build script for the kernel build that boots.
+- `tools/fb/`: framebuffer text viewers for showing output on screen with TWRP stopped.
