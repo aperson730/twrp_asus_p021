@@ -123,6 +123,18 @@ Read from the ASUS source, not yet tested on the device.
   the original code (3 cores, TWRP idle, `/proc/interrupts` IRQ 124). The patch was dropped;
   leave this code as it is.
 
+Test run 2026-11-13 (old gcc 4.6.3 kernel, `stage2-4core`, TWRP left idle, kmsg streamed live,
+`/proc/stat` + `/proc/interrupts` every 5 s):
+- At about 57 s uptime touch and adb died (`adb shell` and `adb pull` both hang; device still
+  listed as `recovery`). The TWRP clock kept running, so the kernel and display were alive.
+- The kernel log has nothing after 56.7 s: no soft lockup, RCU stall or panic in 7 minutes.
+- No reset by itself in 7 minutes; it needed a forced power-off.
+- The last snapshot (54 s) was normal on all 4 cores.
+- Under stock Android only cpu3 shows steal time (`/proc/stat` steal column: 615, others 0).
+- Reading: a partial freeze, consistent with one vCPU (probably cpu3) no longer being run by
+  the hypervisor while the others continue. Per-CPU lockup detectors cannot report a CPU that
+  does not run. Not proven.
+
 Tests to run next:
 1. Stream the kernel log to the PC through the stall: `adb shell cat /proc/kmsg > kmsg-stall.txt`,
    then look for `soft lockup`, `hard LOCKUP` or `RCU stall` near the end (names the stuck CPU).
