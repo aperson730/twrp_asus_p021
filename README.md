@@ -117,10 +117,11 @@ Read from the ASUS source, not yet tested on the device.
   stall is a guess.
 - Timer layout (device tree): STM timer `intel,stm,cpumask = <0x03>` (cpu0-1), CapCom
   `intel,cc,cpumask = <0x0c>` (cpu2-3).
-- **CapCom driver bug (fixed in `kernel/patches/capcom-oneshot.diff`):** `_xgold_cc_set_mode`
-  returned early whenever the timer was already periodic, so the switch to oneshot never
-  happened and the cpu2/cpu3 timers kept firing every tick even when idle. cpu2 has the same
-  bug and works, so this is probably not the cause of the stall. The fix is untested.
+- **CapCom `_xgold_cc_set_mode` early return is NOT a bug in practice (tested 2026-11-13).**
+  It looks like the switch to oneshot is skipped once the timer is periodic. A patch that
+  removed the early return made idle cpu2 take 1225 CapCom interrupts in 10 s, against 56 with
+  the original code (3 cores, TWRP idle, `/proc/interrupts` IRQ 124). The patch was dropped;
+  leave this code as it is.
 
 Tests to run next:
 1. Stream the kernel log to the PC through the stall: `adb shell cat /proc/kmsg > kmsg-stall.txt`,
@@ -152,6 +153,5 @@ Verified: uid=0 adb, one TWRP start, UI and boot backup working with the 7.1 toy
 - `patches/`: source fixes for twrp-5.1 (bootable/recovery) and twrp-7.1 (busybox, mkbootimg).
 - `bringup/`: stage-1 image, stage-2 assembly, boot image tools; `hybrid-71/` holds the edited
   init files for the 7.1 hybrid.
-- `kernel/`: stock kernel config, build script and source patches (`kernel/patches/`) for the
-  kernel build that boots.
+- `kernel/`: stock kernel config and build script for the kernel build that boots.
 - `tools/fb/`: framebuffer text viewers for showing output on screen with TWRP stopped.

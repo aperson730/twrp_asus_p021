@@ -13,8 +13,4 @@ Build: run kernel/build.sh in the container (checks for gcc 4.6.3; config defaul
 Package: bringup/repack-kernel.py STOCK_RECOVERY.img RAMDISK.gz OUT.img bzImage
 Boot: fastboot boot OUT.img   (never flash; unproven with secure: YES)
 Builds with gcc 5.4 and gcc 4.8 crashed immediately at boot with the same source and config.
-
-Patches (apply in the source root with `patch -p1 < FILE`):
-- patches/capcom-oneshot.diff: the CapCom timer (cpu2/cpu3) never switched from periodic to
-  oneshot mode. Untested on the device. Kernels built before it was applied (bzImage-precise)
-  do not have it.
+build.sh tested as a script on 2026-11-13 (incremental build in the existing container).
