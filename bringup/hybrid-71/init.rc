@@ -87,6 +87,15 @@ service healthd /sbin/healthd -r
 service recovery /sbin/recovery
     seclabel u:r:recovery:s0
 
+# Start the modem VM so the hypervisor keeps running cpu3 (falls back to cpu3 offline).
+service modem_start /system/bin/sh /sbin/modem-start.sh
+    disabled
+    oneshot
+    seclabel u:r:recovery:s0
+
+on boot
+    start modem_start
+
 service adbd /sbin/adbd --device_banner=recovery
     disabled
     socket adbd stream 660 system system

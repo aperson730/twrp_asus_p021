@@ -46,7 +46,10 @@ Intel SoFIA 3G (x86), stock Android 5.0.2 (LRX22G, WW_P021-V4.6.5-20160419).
    shows no warnings, so a kernel log of the stall itself has not been captured yet.
    See "Four-core stall: findings from the kernel source" below.
    - twrp-5.1 tree: single core (cpu1-3 offline in `recovery/root/init.recovery.sofia3g.rc`).
-   - twrp-7.1 hybrid: three cores (only cpu3 offline in `bringup/hybrid-71/init.recovery.sofia3g.rc`).
+   - twrp-7.1 hybrid: **all four cores**. Service `modem_start` (`bringup/hybrid-71/init.rc`,
+     script `bringup/modem-start.sh`) starts the modem VM at boot, which keeps cpu3 alive. If the
+     modem does not come up within 10 s, the script takes cpu3 offline instead. Log:
+     `/tmp/modem-start.log`. See "Four-core stall" below.
 2. **Ramdisk size limit.** The stock layout leaves about 3 MB between the ramdisk and second-blob
    addresses, so a full TWRP ramdisk does not fit. Boot is **two-stage**:
    - Stage 1: a modified stock recovery image (`mod-recovery.img`) mounts `/data` read-only,
@@ -195,9 +198,13 @@ Reading: the hypervisor stops running vcpu3 at ~57 s if the modem VM has not bee
 probably because vcpu3 shares its physical core with the modem. Not yet automatic: the
 script must run before ~57 s. Without it, keep the 3-core default.
 
+Automatic version (2026-11-13): `assemble-hybrid.sh` installs `modem-start.sh` as
+`/sbin/modem-start.sh` and `init.rc` starts it `on boot`. First boot: script began at 7.1 s,
+firmware written by 8.9 s, modem On at 9.2 s, all 4 cores; cpu3 still taking timer interrupts
+at 160 s. One boot so far; the 10 s fallback path is untested.
+
 Tests to run next:
-- Make it automatic (stage-2 init service, before 57 s), then repeat over several boots
-  before making 4 cores the default.
+- Repeat the automatic build over several boots and longer sessions.
 - Watch for modem traps or resets without the Android modem daemons (`nvm_useragent` etc.).
   If needed, phase 2: run rpcServer/rpc-daemon from read-only /system, with
   /nvm_fs_partition mounted `ro,noload` and copied to a tmpfs (never written, never run

@@ -27,6 +27,5 @@ on boot
     chmod 0660 /sys/devices/system/cpu/cpu0/cpufreq/thermal_scaling_max_freq
     write /sys/devices/system/cpu/cpu0/cpufreq/thermal_scaling_max_freq 728000
 
-
-on init
-    write /sys/devices/system/cpu/cpu3/online 0
+# cpu3 is no longer taken offline here: service modem_start (init.rc) starts the modem VM,
+# which keeps cpu3 alive, and takes cpu3 offline itself if the modem does not come up.
