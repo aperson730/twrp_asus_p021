@@ -244,3 +244,4 @@ Verified: uid=0 adb, one TWRP start, UI and boot backup working with the 7.1 toy
   init files for the 7.1 hybrid.
 - `kernel/`: stock kernel config and build script for the kernel build that boots.
 - `tools/fb/`: framebuffer text viewers for showing output on screen with TWRP stopped.
+- `docs/lineage-14.1-plan.md`: findings and plan for a LineageOS 14.1 (Android 7.1) port.
