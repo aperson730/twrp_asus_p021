@@ -44,6 +44,7 @@ Intel SoFIA 3G (x86), stock Android 5.0.2 (LRX22G, WW_P021-V4.6.5-20160419).
    Timer layout from the boot log: cpu0 and cpu1 use the STM timer, cpu2 and cpu3 use the two
    CapCom channels. A 4-core boot log of the rebuilt kernel (ends at 56 s, before the stall)
    shows no warnings, so a kernel log of the stall itself has not been captured yet.
+   See "Four-core stall: findings from the kernel source" below.
    - twrp-5.1 tree: single core (cpu1-3 offline in `recovery/root/init.recovery.sofia3g.rc`).
    - twrp-7.1 hybrid: three cores (only cpu3 offline in `bringup/hybrid-71/init.recovery.sofia3g.rc`).
 2. **Ramdisk size limit.** The stock layout leaves about 3 MB between the ramdisk and second-blob
@@ -94,6 +95,42 @@ Generated with twrpdtgen (SebaUbuntu), then heavily modified by hand.
 - SD card (exFAT) does not mount; needs texfat.ko from stock system/lib/modules.
 - Hybrid: stock Intel init/sepolicy with 7.1 recovery, linker, libs and adbd (no --root_seclabel).
 
+## Four-core stall: findings from the kernel source
+Read from the ASUS source, not yet tested on the device.
+
+- **Linux is a guest under Intel's Mobilevisor hypervisor**, which also runs a separate modem VM.
+  The 4 CPUs Linux sees are virtual. Core start/stop, IPIs, the APIC timer and CPU frequency
+  are hypercalls (`arch/x86/kernel/apic/apic_sofia.c`, `arch/x86/sofia/`).
+- **cpu3 re-online failure happens in the hypervisor.** Offlining calls `mv_vcpu_stop`,
+  onlining calls `mv_vcpu_start`. `CPU3: Not responding` (`smpboot.c`) means vcpu3 never
+  reached Linux code after `mv_vcpu_start`; the CapCom timer setup comes later and is never hit.
+- **The "hard reset" is probably a Linux panic.** The stock config has
+  `BOOTPARAM_SOFTLOCKUP_PANIC`, `BOOTPARAM_HARDLOCKUP_PANIC`, `PANIC_ON_OOPS` and
+  `PANIC_TIMEOUT=1` (reboot 1 s after a panic). The panic text goes to ramoops
+  (`/sys/fs/pstore`, 2 MB console, `arch/x86/platform/xgold/xgold_pstore_ram.c`) and to the
+  hypervisor via `drivers/mobilevisor/vdump.c`.
+- **cpu3 probably shares its physical core with the modem VM.** Under stock Android cpu3 shows
+  steal time and the others don't; `arch/x86/sofia/cpu.c` has
+  "FIXME: Get the vcpu shared with another vm". Android starts the modem VM by writing 1 to
+  `/sys/class/misc/vmodem/modem_state` (`drivers/mobilevisor/modem.c`). Recovery runs none of
+  the modem daemons, so cpu3 runs under different conditions in TWRP. How this would cause the
+  stall is a guess.
+- Timer layout (device tree): STM timer `intel,stm,cpumask = <0x03>` (cpu0-1), CapCom
+  `intel,cc,cpumask = <0x0c>` (cpu2-3).
+- **CapCom driver bug (fixed in `kernel/patches/capcom-oneshot.diff`):** `_xgold_cc_set_mode`
+  returned early whenever the timer was already periodic, so the switch to oneshot never
+  happened and the cpu2/cpu3 timers kept firing every tick even when idle. cpu2 has the same
+  bug and works, so this is probably not the cause of the stall. The fix is untested.
+
+Tests to run next:
+1. Stream the kernel log to the PC through the stall: `adb shell cat /proc/kmsg > kmsg-stall.txt`,
+   then look for `soft lockup`, `hard LOCKUP` or `RCU stall` near the end (names the stuck CPU).
+2. In TWRP, before onlining cpu3: `echo 0 > /proc/sys/kernel/softlockup_panic; echo 0 > /proc/sys/kernel/panic`.
+   If the tablet then freezes without resetting, the reset is a Linux panic; try `dmesg` over adb.
+3. After a stall reset, go straight to fastboot (not stock Android), boot TWRP, then
+   `mount -t pstore pstore /sys/fs/pstore; ls /sys/fs/pstore`.
+4. `cat /sys/class/misc/vmodem/modem_state` in TWRP and in stock Android.
+
 ## Building on twrp-7.1 (current)
 Use `-b twrp-7.1` in `repo init`. Apply `patches/twrp-7.1-busybox.diff` in `external/busybox`
 (strchrnul declaration conflict). `BoardConfig.mk` uses base 0 with absolute offsets because the
@@ -115,5 +152,6 @@ Verified: uid=0 adb, one TWRP start, UI and boot backup working with the 7.1 toy
 - `patches/`: source fixes for twrp-5.1 (bootable/recovery) and twrp-7.1 (busybox, mkbootimg).
 - `bringup/`: stage-1 image, stage-2 assembly, boot image tools; `hybrid-71/` holds the edited
   init files for the 7.1 hybrid.
-- `kernel/`: stock kernel config and build script for the kernel build that boots.
+- `kernel/`: stock kernel config, build script and source patches (`kernel/patches/`) for the
+  kernel build that boots.
 - `tools/fb/`: framebuffer text viewers for showing output on screen with TWRP stopped.
