@@ -156,8 +156,18 @@ Second run 2026-11-13 (same setup, logger on the tablet pinned to cpu0 writing t
 - Open question: why the hypervisor stops delivering interrupts to vcpu3 (or stops running it)
   at ~57 s in TWRP but not in Android, where cpu3 shows steal time and keeps working.
 
+Third run 2026-11-13: cpu3 kept busy from 9 s (`busybox taskset 0x8 sh -c "while :; do :; done"`),
+logger on cpu0. **cpu3 still died between 49 s and 62 s uptime** (busy ticks frozen at 4890,
+CapCom IRQ 125 frozen, `watchdog/3` stopped). So the loss does not depend on idle; the
+hypervisor stops running vcpu3 at a fixed point (~57 s) whatever it is doing.
+Side effect: busy cpu3 still held the `do_timer` (timekeeping) duty when it froze, so system time
+stopped advancing. The TWRP clock froze, `/proc/uptime` read 101 s after 10 minutes (it only wraps
+from the last update), the logger's `sleep 2` never returned after 199.6 s, and no soft lockup
+fired (its timer depends on the same clock). In the idle run the duty had moved to another CPU,
+which is why that clock kept going. Workaround for now: keep cpu3 offline (current default).
+
 Tests to run next:
-0. Keep cpu3 busy (a spin loop pinned with `taskset 0x8`) so it never goes idle. If it survives
+0. (done, see above) Keep cpu3 busy (a spin loop pinned with `taskset 0x8`) so it never goes idle. If it survives
    past 60 s, the loss happens on idle entry/wakeup; if it still dies, the hypervisor takes the
    vcpu at a fixed time. Then try disabling cpu3's cpuidle state
    (`/sys/devices/system/cpu/cpu3/cpuidle/state*/disable`).
