@@ -3,7 +3,8 @@
 Source: ASUS Z300CG_V4.6.5-update, linux-3.10 folder (Makefile says 3.14.0).
 Config: the one embedded in the stock kernel (extracted with scripts/extract-ikconfig).
 Toolchain: Ubuntu 12.04 container, gcc 4.6.3 (the compiler named in the stock banner), plus openssl.
-Build:
+Build: run kernel/build.sh in the container (checks for gcc 4.6.3; config defaults to
+/ksrc/kernel-running.config, then /ksrc/stock-embedded.config). It runs these steps:
   export TARGET_BUILD_VARIANT=user
   make O=out ARCH=i386 olddefconfig
   scripts/config --file out/.config --set-str LOCALVERSION "-00002-ge2a1f04"

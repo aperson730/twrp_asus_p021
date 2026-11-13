@@ -41,6 +41,9 @@ Intel SoFIA 3G (x86), stock Android 5.0.2 (LRX22G, WW_P021-V4.6.5-20160419).
    Cores 0-2 with cpu3 offline is stable. Once offline, cpu3 cannot be brought back
    (`smpboot: CPU3: Not responding`); cpu1 and cpu2 re-online fine. Under stock Android all
    4 cores run.
+   Timer layout from the boot log: cpu0 and cpu1 use the STM timer, cpu2 and cpu3 use the two
+   CapCom channels. A 4-core boot log of the rebuilt kernel (ends at 56 s, before the stall)
+   shows no warnings, so a kernel log of the stall itself has not been captured yet.
    - twrp-5.1 tree: single core (cpu1-3 offline in `recovery/root/init.recovery.sofia3g.rc`).
    - twrp-7.1 hybrid: three cores (only cpu3 offline in `bringup/hybrid-71/init.recovery.sofia3g.rc`).
 2. **Ramdisk size limit.** The stock layout leaves about 3 MB between the ramdisk and second-blob

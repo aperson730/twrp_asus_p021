@@ -3,7 +3,8 @@
 - bootinfo.py: prints boot image header fields (page size, addresses, cmdline).
 - repack.py: rebuilds a boot image from a stock one with a new ramdisk
   (copies kernel + second blob, which is the device tree, recomputes SHA). Optional 4th arg sets ramdisk address.
-- build-mod.sh: builds mod-recovery.img (stage 1).
+- build-mod.sh [RAMDISK_DIR] [STOCK_RECOVERY_IMG] [OUT_DIR]: builds mod-recovery.img (stage 1)
+  with this repo's repack.py, and fails if the ramdisk reaches 3,145,728 bytes.
 - stage1.sh: init script in stage 1. Mounts /data read-only, unpacks
   /data/local/tmp/stage2.tar.gz into a 96 MB tmpfs, switch_root to /twrp/init.
   Falls back to /init.stock on any failure.
