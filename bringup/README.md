@@ -16,6 +16,12 @@ Stock /init is renamed init.stock; sbin/ueventd and sbin/watchdogd symlink to it
 Inputs are your own stock images split from fwu_image.bin (not committed).
 Boot with: fastboot boot mod-recovery.img   (never flash, unproven)
 
+- modem-start.sh: starts the modem VM in TWRP without Android daemons (read-only /system,
+  firmware into /dev/vmodem, `modem_state` = 1). Keeps cpu3 alive on 4 cores. Run before ~57 s.
+- stall-logger.sh: every 2 s logs per-CPU time, timer/IPI counts and per-CPU kernel threads to
+  /data/local/tmp/stall/log.txt. Run pinned to cpu0:
+  `busybox setsid busybox taskset 0x1 sh /data/local/tmp/stall-logger.sh`
+
 ## Saved files
 - stage1.sh: the stage-1 /init script (installed as /init in the ramdisk).
 - stage1-init.rc, stage1-default.prop: modified stock init.rc (adds `disabled` under

@@ -175,7 +175,33 @@ Inconclusive about the modem's role, since it never ran. In Android the `modem_s
 owned by `radio`, so a radio daemon (probably rild) starts it, maybe after other setup
 (`sec_daemon`, `setup_fs_nvm`) that TWRP lacks.
 
+**Fix found (fifth run, 2026-11-13): start the modem VM and cpu3 survives.**
+Android loads the modem firmware from userspace (`libRpcService.so` runs
+`cat /system/vendor/firmware/modem.fls_ID0_CUST_LoadMap0.bin > /dev/vmodem`) before writing
+`modem_state`; the fourth run skipped that, so the hypervisor had nothing to start.
+`bringup/modem-start.sh` does the same with no Android daemons: mounts system (ImcPartID068)
+read-only with `noload` at /mnt/sysro, copies the 29 MB firmware into the modem's RAM through
+`/dev/vmodem` (the driver only `ioremap`s the reserved region), writes 1 to `modem_state`
+(the driver reads ImcPartID022-024 read-only into modem RAM and calls `mv_vm_start(1)`).
+No flash writes.
+Result with `stage2-4core`, the gcc 4.6.3 kernel, script started at ~9 s by hand over adb:
+- `modem_state` On at 11.5 s and for the whole run.
+- All 4 cores online past 5 minutes (300+ s). cpu3's CapCom IRQ kept counting
+  (5007 -> 16512 between 118 s and 293 s), `watchdog/3` kept running (81 switches vs 17 when stuck).
+- cpu3 now shows steal time (82 -> 853 ticks), like stock Android: the modem VM shares
+  physical core 3.
+- Touch, UI and adb worked throughout; adbd even ran on cpu3.
+Reading: the hypervisor stops running vcpu3 at ~57 s if the modem VM has not been started,
+probably because vcpu3 shares its physical core with the modem. Not yet automatic: the
+script must run before ~57 s. Without it, keep the 3-core default.
+
 Tests to run next:
+- Make it automatic (stage-2 init service, before 57 s), then repeat over several boots
+  before making 4 cores the default.
+- Watch for modem traps or resets without the Android modem daemons (`nvm_useragent` etc.).
+  If needed, phase 2: run rpcServer/rpc-daemon from read-only /system, with
+  /nvm_fs_partition mounted `ro,noload` and copied to a tmpfs (never written, never run
+  `setup_fs_nvm`).
 0. (done, see above) Keep cpu3 busy (a spin loop pinned with `taskset 0x8`) so it never goes idle. If it survives
    past 60 s, the loss happens on idle entry/wakeup; if it still dies, the hypervisor takes the
    vcpu at a fixed time. Then try disabling cpu3's cpuidle state
