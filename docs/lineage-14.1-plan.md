@@ -1,6 +1,7 @@
 # LineageOS 14.1 (Android 7.1) for the Z300CG (P021): findings and plan
 
-Status: research only, nothing built yet (2026-11-13).
+Status (2026-11-13): phases 1-2 done. LineageOS 14.1 builds and completes a full boot
+(`sys.boot_completed=1`, Setup Wizard on screen) with software graphics. See "Progress" at the end.
 
 ## Findings
 
@@ -84,3 +85,48 @@ Rough effort: phase 2 in days; phase 3 days or possibly not solvable.
 - Android-x86 cm-x86 14.1 r1: https://www.android-x86.org/releases/releasenote-cm-x86-14-1-r1
 - Unofficial LineageOS 14.1 for ME176C (XDA): https://forum.xda-developers.com/t/rom-7-1-2-2018-09-26-unofficial-lineageos-14-1-for-asus-memo-pad-7-me176c-x.3633341/
 - android-x86 group, libnb vs libhoudini: https://groups.google.com/g/android-x86/c/SEMbCDXzTz4
+
+## Progress (2026-11-13)
+
+Where things live (PC, not in this repo):
+- Source: `~/lineage-14.1` (cm-14.1, synced with `--no-git-lfs`; only
+  `external/chromium-webview/prebuilt/x86/webview.apk` was fetched from LFS by hand).
+- Device tree: `~/lineage-14.1/device/asus/P021` (local git; backup tarball in
+  `~/z300cg-final-backup/lineage-device-P021-*.tar.gz`). Contains `patches/` with the
+  `system/sepolicy` change (re-apply after `repo sync`).
+- Closed files: `~/lineage-14.1/vendor/asus/P021` (from `extract-files.sh`; private, never publish).
+  Full stock /system copy: `~/z300cg/stock-system/system.tar` (read-only tar from TWRP).
+- Build container: image `lineage-builder` (twrp-builder + imagemagick, schedtool, pngcrush,
+  yasm, Jack TLS fix). Run as `-u 1000:1000 -e HOME=/tmp/home` and `mkdir -p $HOME` first.
+- Test boot: `device/asus/P021/preinit/make-test-boot.sh <busybox-i686.bin>` makes
+  `out/.../boot-looptest.img`; images live on the tablet in `/data/local/tmp/lineage/`
+  (`system.img` raw ext4 from `simg2img`, `data.img`, `cache.img` from `make_ext4fs`).
+  Push them from TWRP, then `fastboot boot boot-looptest.img`.
+
+Fixes needed to get a full boot (all in the device tree):
+1. Product file must be named `lineage.mk` (cm-14.1 looks up `device/*/P021/lineage.mk`).
+2. Prebuilt kernel: ship `make headers_install` output for `KERNEL_OBJ/usr`.
+3. SELinux: kernel 3.14 accepts policy v29 only; `POLICYVERS := 29` and strip `*xperm` rules.
+4. Pre-init: `/sbin/ueventd` and `/sbin/watchdogd` link to `../init`; point them at `init.real`.
+5. adb over FunctionFS (`f_ffs/aliases adb`, functionfs mount), adb key shipped as `/adb_keys`,
+   `persist.sys.root_access=3`.
+6. Software GLES: `persist.sys.force_sw_gles=1`, no `hwcomposer.default` (NULL hooks, crashes SF).
+7. Stock `by-name` path symlink (the vmodem kernel driver and the modem start need it).
+8. `notrim` on the loop devices: vold fstrim corrupted dalvik-cache through the loop device
+   (SIGBUS in system_server 30 s after the trim).
+9. cpusets: N init.rc puts every cpuset on cpu 0; set real cores in `init.sofia3g.rc`
+   (boot stalled for 10+ minutes before this).
+10. Modem start works under LineageOS; all 4 cores online.
+
+In the device tree but not yet built/tested: dexpreopt, cpuset cores, no 728 MHz cap
+(interactive governor), boot animation size (built, works).
+
+Current blocker: input does not reach apps. The window manager waits for SystemUI's keyguard
+to finish drawing (`mKeyguardDrawComplete=false`, `KeyguardScrim` holds focus). SystemUI cannot
+render properly with the GLES 1.x software renderer (wallpaper and keyguard need GLES 2).
+Touch itself works (events reach the input dispatcher).
+
+Next steps:
+- Workaround build: `ro.lockscreen.disable.default=true`, optionally mark setup complete.
+- Phase 3: Mali-450 (`libGLES_mali.so`, `gralloc.sofia3g`, `hwcomposer.sofia3g`) with shims.
+- Kernel: backport SELinux extended permissions (ioctl xperms) to allow policy v30.
